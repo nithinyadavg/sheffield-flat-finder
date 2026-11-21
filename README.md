@@ -20,8 +20,8 @@ Built for people moving to Sheffield for work or study who don't know the city y
 
 | Data | Source | Licence | Freshness |
 |---|---|---|---|
-| Bus stops, tram stops, shops, pharmacies, gyms | OpenStreetMap via the Overpass API | ODbL | Live (cached in your browser for 24 h) |
-| Street-level crime | [data.police.uk](https://data.police.uk/docs/) | Open Government Licence v3 | Latest published month |
+| Bus stops, tram stops, shops, pharmacies, gyms | OpenStreetMap via the Overpass API | ODbL | Refreshed weekly into `data/osm.json` by a GitHub Action; the browser fetches live from Overpass if the snapshot is missing |
+| Street-level crime | [data.police.uk](https://data.police.uk/docs/) | Open Government Licence v3 | Latest published month, refreshed weekly into `data/crime.json` |
 | Postcode lookup | [postcodes.io](https://postcodes.io) | OGL / free | Live |
 | Map tiles | CARTO dark basemap, © OpenStreetMap contributors | | Live |
 | Area notes and price ranges | `data/areas.json`, hand-compiled | MIT (this repo) | Nov 2026 snapshot |
@@ -41,11 +41,17 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
+## Refresh the data by hand
+
+```bash
+python3 scripts/refresh_data.py   # writes data/osm.json and data/crime.json (standard library only)
+```
+
 ## Make one for your city
 
 1. Fork the repo.
 2. Edit `data/areas.json`: area names, postcode districts (outcodes), centre coordinates, price ranges and notes.
-3. In `app.js`, change `CENTRE`, `BBOX`, `STATION` and `M1_JUNCTIONS` (your nearest motorway junctions).
+3. In `app.js`, change `CENTRE`, `BBOX`, `STATION` and `M1_JUNCTIONS` (your nearest motorway junctions). Change `BBOX` in `scripts/refresh_data.py` too.
 4. Turn on GitHub Pages (Settings → Pages → deploy from `main`).
 
 ## Contributing

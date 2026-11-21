@@ -10,7 +10,7 @@
   const BBOX = [53.30, -1.60, 53.45, -1.32]; // south, west, north, east
   const STATION = [53.3781, -1.4620];
   const M1_JUNCTIONS = [[53.3937, -1.3866], [53.4156, -1.4137], [53.3703, -1.3043]]; // J33, J34, J31 (approx)
-  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   const CACHE_HOURS = 24;
 
   const PRIORITIES = [
@@ -99,39 +99,52 @@
   }
 
   // ---------- live data: OpenStreetMap ----------
+  // 1) browser cache, 2) snapshot in data/osm.json (refreshed weekly by a GitHub Action), 3) Overpass API live.
   async function loadOSM() {
-    const cached = store.get('sff-osm-v1');
+    const cached = store.get('sff-osm-v2');
     if (cached) { Object.assign(live.points, cached); live.osmOk = true; return; }
+    try {
+      const r = await fetch('data/osm.json', { cache: 'no-cache' });
+      if (r.ok) {
+        const j = await r.json();
+        Object.assign(live.points, { bus: j.bus, tram: j.tram, shop: j.shop, gym: j.gym });
+        live.osmOk = true; live.osmDate = (j.fetched || '').slice(0, 10);
+        return;
+      }
+    } catch (err) { /* no snapshot yet, go live */ }
+    setStatus('fetching live OpenStreetMap data (~30 s first time)…');
     const [s, w, n, e] = BBOX;
     const bb = `(${s},${w},${n},${e})`;
-    const q = `[out:json][timeout:60];(
-      node["highway"="bus_stop"]${bb};
-      node["railway"="tram_stop"]${bb};
-      nwr["shop"~"^(supermarket|convenience)$"]${bb};
-      nwr["amenity"="pharmacy"]${bb};
-      nwr["leisure"~"^(fitness_centre|sports_centre)$"]${bb};
-    );out center tags;`;
+    // "make sep" rows mark where each category starts, so we can skip tags and keep the download small.
+    const q = `[out:json][timeout:90];
+      node["highway"="bus_stop"]${bb};out skel qt;
+      make sep kind="tram";out;
+      node["railway"="tram_stop"]${bb};out skel qt;
+      make sep kind="shop";out;
+      (nwr["shop"~"^(supermarket|convenience)$"]${bb};nwr["amenity"="pharmacy"]${bb};);out center qt;
+      make sep kind="gym";out;
+      nwr["leisure"~"^(fitness_centre|sports_centre)$"]${bb};out center qt;`;
     let json = null;
     for (const url of OVERPASS) {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 90000);
       try {
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        const r = await fetch(url, { method: 'POST', signal: ac.signal, body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
         if (r.ok) { json = await r.json(); break; }
-      } catch (err) { /* try next mirror */ }
+      } catch (err) { /* try next mirror */ } finally { clearTimeout(timer); }
     }
     if (!json) throw new Error('OpenStreetMap data unavailable');
     const pts = { bus: [], tram: [], shop: [], gym: [] };
+    let kind = 'bus';
     for (const x of json.elements) {
-      const lat = x.lat ?? x.center?.lat, lng = x.lon ?? x.center?.lon, t = x.tags || {};
-      if (lat == null) continue;
-      const p = [+lat.toFixed(5), +lng.toFixed(5)];
-      if (t.railway === 'tram_stop') pts.tram.push(p);
-      else if (t.highway === 'bus_stop') pts.bus.push(p);
-      else if (t.shop || t.amenity === 'pharmacy') pts.shop.push(p);
-      else if (t.leisure) pts.gym.push(p);
+      if (x.type === 'sep') { kind = x.tags.kind; continue; }
+      const lat = x.lat ?? x.center?.lat, lng = x.lon ?? x.center?.lon;
+      if (lat == null || !pts[kind]) continue;
+      pts[kind].push([+lat.toFixed(5), +lng.toFixed(5)]);
     }
     Object.assign(live.points, pts);
-    live.osmOk = true;
-    store.set('sff-osm-v1', pts);
+    live.osmOk = true; live.osmDate = new Date().toISOString().slice(0, 10);
+    store.set('sff-osm-v2', pts);
   }
 
   // ---------- live data: police.uk street crime ----------
@@ -143,6 +156,13 @@
   async function loadCrime() {
     const cached = store.get('sff-crime-v1');
     if (cached) { live.crime = cached.counts; live.points.crime = cached.pts; live.crimeMonth = cached.month; live.crimeOk = true; return; }
+    try {
+      const r = await fetch('data/crime.json', { cache: 'no-cache' });
+      if (r.ok) {
+        const j = await r.json();
+        if (j.counts && Object.keys(j.counts).length) { live.crime = j.counts; live.points.crime = j.pts || []; live.crimeMonth = j.month; live.crimeOk = true; return; }
+      }
+    } catch (err) { /* fall back to the live API */ }
     const counts = {}, pts = [];
     let month = null;
     const queue = [...AREAS];
@@ -418,12 +438,12 @@
     render();
     if (state.pendingWork) { $('#work').value = state.pendingWork; setWork(state.pendingWork); }
 
-    setStatus('loading live map data…');
+    setStatus('loading map data…');
     const osm = loadOSM().then(() => { ['bus', 'tram', 'shop', 'gym'].forEach(drawDots); render(); }).catch(() => {});
     const crime = loadCrime().then(() => { drawDots('crime'); render(); }).catch(() => {});
     await Promise.all([osm, crime]);
     const bits = [];
-    if (live.osmOk) bits.push(`${live.points.bus.length.toLocaleString()} bus stops, ${live.points.shop.length} shops`);
+    if (live.osmOk) bits.push(`${live.points.bus.length.toLocaleString()} bus stops, ${live.points.shop.length} shops${live.osmDate ? ' (' + live.osmDate + ')' : ''}`);
     if (live.crimeOk) bits.push(`crime ${live.crimeMonth || ''}`);
     setStatus(bits.length ? 'live: ' + bits.join(' · ') : 'live data offline, using guide only');
   }
