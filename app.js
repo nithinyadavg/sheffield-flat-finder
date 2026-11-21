@@ -78,12 +78,16 @@
   }
 
   // ---------- map ----------
-  const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView(CENTRE, 12);
+  const map = L.map('map', { zoomControl: false, preferCanvas: true, maxZoom: 17 }).setView(CENTRE, 12);
   L.control.zoom({ position: 'topright' }).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    subdomains: 'abcd', maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  // Esri dark grey canvas: free to use with attribution, no API key.
+  const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  L.tileLayer(ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16, maxNativeZoom: 16,
+    attribution: 'Basemap &copy; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(map);
+  map.createPane('labels'); map.getPane('labels').style.zIndex = 450; map.getPane('labels').style.pointerEvents = 'none';
+  L.tileLayer(ESRI + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, maxNativeZoom: 16, pane: 'labels', opacity: 0.7 }).addTo(map);
   const canvas = L.canvas({ padding: 0.5 });
   const dotLayers = Object.fromEntries(Object.keys(LAYER_STYLE).map(k => [k, L.layerGroup()]));
   const areaLayer = L.layerGroup().addTo(map);
@@ -222,11 +226,19 @@
 
   function score() {
     const norms = {};
+    // Rank-based (percentile) scaling, so one outlier such as the city centre's crime count
+    // doesn't squash every other area together.
     for (const p of PRIORITIES) {
-      const vals = AREAS.map(a => raw(a, p.k)).filter(v => v != null);
+      const vals = AREAS.map(a => raw(a, p.k)).filter(v => v != null).sort((x, y) => x - y);
       if (!vals.length) continue;
-      const lo = Math.min(...vals), hi = Math.max(...vals);
-      norms[p.k] = a => { const v = raw(a, p.k); return v == null ? null : (hi === lo ? 1 : (v - lo) / (hi - lo)); };
+      const n = vals.length;
+      norms[p.k] = a => {
+        const v = raw(a, p.k);
+        if (v == null) return null;
+        if (n === 1) return 1;
+        const below = vals.filter(x => x < v).length, equal = vals.filter(x => x === v).length;
+        return (below + (equal - 1) / 2) / (n - 1);
+      };
     }
     for (const a of AREAS) {
       let sum = 0, wsum = 0;

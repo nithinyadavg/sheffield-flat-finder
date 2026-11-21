@@ -23,7 +23,7 @@ Built for people moving to Sheffield for work or study who don't know the city y
 | Bus stops, tram stops, shops, pharmacies, gyms | OpenStreetMap via the Overpass API | ODbL | Refreshed weekly into `data/osm.json` by a GitHub Action; the browser fetches live from Overpass if the snapshot is missing |
 | Street-level crime | [data.police.uk](https://data.police.uk/docs/) | Open Government Licence v3 | Latest published month, refreshed weekly into `data/crime.json` |
 | Postcode lookup | [postcodes.io](https://postcodes.io) | OGL / free | Live |
-| Map tiles | CARTO dark basemap, © OpenStreetMap contributors | | Live |
+| Map tiles | Esri World Dark Gray Canvas (no key needed) | Esri terms, attribution shown | Live |
 | Area notes and price ranges | `data/areas.json`, hand-compiled | MIT (this repo) | Nov 2026 snapshot |
 
 **The price ranges are a rough guide, not live prices.** They were compiled in November 2026 from public listing snapshots and SpareRoom's Q3 2026 rental index. Always check the live listings. Crime counts cover a ~1.2 km² box around each area centre. Busy areas like the city centre always score worse, so compare similar areas.
