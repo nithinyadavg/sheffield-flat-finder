@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Find the flat that fits - Sheffield</title>
+<meta name="description" content="Free, open-source map to find the right area to rent in Sheffield: budget, en-suite, bills, parking, transport, shops, crime and commute.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map" aria-label="Map of Sheffield"></div>
+
+<aside id="panel">
+  <button id="panel-toggle" aria-label="Show or hide filters"><span></span></button>
+  <header>
+    <p class="eyebrow">Sheffield &middot; open source</p>
+    <h1>Find the flat<br>that fits.</h1>
+    <p class="sub">Rank neighbourhoods by what matters to you, then jump straight to live listings.</p>
+  </header>
+
+  <section class="group">
+    <h2>I'm looking for</h2>
+    <div class="seg" role="radiogroup" id="type">
+      <button data-v="room" class="on" role="radio" aria-checked="true">Room in a share</button>
+      <button data-v="studio" role="radio" aria-checked="false">Studio / 1-bed</button>
+    </div>
+    <label class="slider">
+      <span>Max budget <b id="budget-out">£650</b> / month</span>
+      <input type="range" id="budget" min="300" max="1200" step="25" value="650">
+    </label>
+  </section>
+
+  <section class="group">
+    <h2>Must have</h2>
+    <div class="chips" id="musts">
+      <button data-k="ensuite">En-suite</button>
+      <button data-k="bills" class="on">Bills included</button>
+      <button data-k="female">Female-only house</button>
+      <button data-k="parking">Parking</button>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>What matters</h2>
+    <div class="prio" id="prios"></div>
+  </section>
+
+  <section class="group">
+    <h2>Where's work?</h2>
+    <form id="work-form" class="row">
+      <input id="work" placeholder="Postcode, e.g. S1 2HE" autocomplete="postal-code">
+      <button type="submit">Set</button>
+    </form>
+    <p class="hint" id="work-hint">Optional. Or remote? Leave blank.</p>
+  </section>
+
+  <section class="group">
+    <h2>Best matches <span class="status" id="status">loading live data…</span></h2>
+    <ol id="results"></ol>
+  </section>
+
+  <section class="group">
+    <h2>Map layers</h2>
+    <div class="chips" id="layers"></div>
+  </section>
+
+  <footer>
+    <p>Prices are a rough guide (Nov 2026), not live. Listings links open SpareRoom, OpenRent and Zoopla with your filters. Live map data: &copy; OpenStreetMap contributors (Overpass), crime: data.police.uk (Open Government Licence), postcodes: postcodes.io.</p>
+    <p><a href="https://github.com/nithinyadavg/sheffield-flat-finder" target="_blank" rel="noopener">Source on GitHub</a> &middot; MIT licence &middot; by <a href="https://nithinyadavg.me" target="_blank" rel="noopener">nithinyadavg</a></p>
+  </footer>
+</aside>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="app.js"></script>
+</body>
+</html>
