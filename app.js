@@ -318,8 +318,8 @@
   }
 
   function focusArea(a) {
-    map.once('moveend', () => areaShapes[a.id]?.openPopup());
     map.flyTo([a.lat, a.lng], 14, { duration: 0.6 });
+    setTimeout(() => areaShapes[a.id]?.openPopup(), 750);
     document.querySelectorAll('#results li').forEach(li => li.classList.toggle('active', li.dataset.id === a.id));
     if (window.innerWidth <= 760) $('#panel').classList.add('collapsed');
   }
