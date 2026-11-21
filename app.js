@@ -286,7 +286,7 @@
     if (a.parking === 'easy') t.push(['Easy parking', 'good']);
     if (a.parking === 'permit') t.push(['Permit parking', state.musts.has('parking') ? 'warn' : '']);
     if (a.students === 2) t.push(['Student-heavy', state.weights.quiet >= 2 ? 'warn' : '']);
-    if (a.students === 0) t.push(['Quiet', 'good']);
+    if (a.students === 0) t.push(['Few students', 'good']);
     if (a.m.m1Km < 3) t.push(['Near M1', 'good']);
     if (a.m.workKm != null) t.push([`${a.m.workKm.toFixed(1)} km to work`, a.m.workKm < 3 ? 'good' : '']);
     return t.map(([s, c]) => `<span class="tag ${c}">${esc(s)}</span>`).join('');
